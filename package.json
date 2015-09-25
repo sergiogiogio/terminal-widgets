@@ -1,0 +1,25 @@
+{
+  "name": "terminal-widgets",
+  "version": "0.1.0",
+  "description": "Widgets for the terminal",
+  "main": "index.js",
+  "scripts": {
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/sergiogiogio/terminal-widgets.git"
+  },
+  "keywords": [
+    "terminal",
+    "widget",
+    "ansi",
+    "menu"
+  ],
+  "author": "sergiogiogio",
+  "license": "ISC",
+  "bugs": {
+    "url": "https://github.com/sergiogiogio/terminal-widgets/issues"
+  },
+  "homepage": "https://github.com/sergiogiogio/terminal-widgets#readme"
+}
