@@ -10,6 +10,7 @@ var cHome = new Buffer( [27, 79, 72] );
 var cEnd = new Buffer( [27, 79, 70] );
 var cPageUp = new Buffer( [27, 91, 53, 126] );
 var cPageDown = new Buffer( [27, 91, 54, 126] );
+var cDelete = new Buffer( [27, 91, 51, 126] ) // '\u001b[3~';
 
 // =======================
 // VBoxLayout
@@ -206,7 +207,8 @@ Menu.prototype.shiftHScroll = function(shift) {
 
 Menu.prototype.handleKeyEvent = function(key) {
 	var hScrollBarHeight = (this.callback.scrollWidth() > 0 ) ? 1 : 0;
-	if(key.compare(cArrowUp) === 0) { this.shiftVCursor(-1); }
+	if (this.callback.handleKeyEvent && this.callback.handleKeyEvent(key)) { }
+	else if(key.compare(cArrowUp) === 0) { this.shiftVCursor(-1); }
 	else if(key.compare(cArrowDown) === 0) { this.shiftVCursor(+1); }
 	else if(key.compare(cArrowLeft) === 0) { this.shiftHScroll(-1); }
 	else if(key.compare(cArrowRight) === 0) { this.shiftHScroll(+1); }
@@ -219,6 +221,84 @@ Menu.prototype.handleKeyEvent = function(key) {
 	return true;
 }
 
+// =======================
+// Input
+// =======================
+
+var Input = function(width, height, callback) {
+	this.width = width;
+	this.height = height;
+	this.callback = callback;
+	this.lines = [ "" ];
+	this.cursorPos = {line: 0, column: 0};
+	this.topLine = 0;
+	this.hScrollPos = 0;
+}
+
+Input.prototype.setLines = function(lines) {
+	this.lines = lines;
+}
+
+Input.prototype.renderIt = function() {
+	var widget = this;
+	return {
+		first: function() {
+			this.it = widget.topLine;
+		},
+		next: function() {
+			this.it++;
+		},
+		line : function() {
+			return (this.it < widget.lines.length) ? widget.callback.item(widget.lines[this.it], (widget.cursorPos.line === this.it) ? widget.cursorPos.column : undefined, widget.width, widget.hScrollPos) : Array(widget.width+1).join(" ");
+		},
+		isDone : function() {
+			return (this.it >= widget.topLine + widget.height);
+		}
+	}
+
+}
+
+Input.prototype.moveCursor = function(shift) {
+	this.cursorPos.line = Math.max(0, Math.min(this.cursorPos.line+shift.line, this.lines.length-1));
+	this.cursorPos.column = Math.max(0, Math.min(this.cursorPos.column+shift.column, this.lines[this.cursorPos.line].length));
+	this.topLine = Math.max(this.cursorPos.line + 1 - this.height, Math.min(this.cursorPos.line, this.topLine));
+	this.hScrollPos = Math.max(this.cursorPos.column + 1 - this.width, Math.min(this.cursorPos.column, this.hScrollPos));
+}
+
+Input.prototype.handleKeyEvent = function(key) {
+	if (this.callback.handleKeyEvent && this.callback.handleKeyEvent(key)) { }
+	else if(key.compare(cPageUp) === 0) { this.moveCursor({line:-this.height, column:0}); }
+	else if(key.compare(cPageDown) === 0) { this.moveCursor({line:this.height, column:0}); }
+	else if(key.compare(cArrowUp) === 0) { this.moveCursor({line:-1, column:0}); }
+	else if(key.compare(cArrowDown) === 0) { this.moveCursor({line:+1, column:0}); }
+	else if(key.compare(cArrowLeft) === 0) { this.moveCursor({line:0, column:-1}); }
+	else if(key.compare(cArrowRight) === 0) { this.moveCursor({line:0, column:+1}); }
+	else if(key.compare(cHome) === 0) { this.moveCursor({line: 0, column:-Number.MAX_VALUE}); }
+	else if(key.compare(cEnd) === 0) { this.moveCursor({line: 0, column:Number.MAX_VALUE}); }
+	else if(key == "\u007F") { // backspace
+		this.lines[this.cursorPos.line] = this.lines[this.cursorPos.line].substring(0, Math.max(0, this.cursorPos.column-1))+this.lines[this.cursorPos.line].substring(this.cursorPos.column);
+		this.moveCursor({ line:0, column:-1});
+	}
+	else if(key.compare(cDelete) === 0) { // delete
+		this.lines[this.cursorPos.line] = this.lines[this.cursorPos.line].substring(0, Math.max(0, this.cursorPos.column))+this.lines[this.cursorPos.line].substring(this.cursorPos.column+1);
+	}
+	else if(key >= "\u0020" && key <= "\u007E") { // printable
+		if(!this.callback.maxColumns || this.lines[this.cursorPos.line].length < this.callback.maxColumns()) {
+			this.lines[this.cursorPos.line] = this.lines[this.cursorPos.line].substring(0, Math.max(0, this.cursorPos.column))+key+this.lines[this.cursorPos.line].substring(this.cursorPos.column);
+			this.moveCursor({ line:0, column:1});
+		}
+	} 
+	else if(key.compare(cEnter) === 0) {
+		if(!this.callback.maxLines || this.lines.length < this.callback.maxLines()) {
+			var newLine = this.lines[this.cursorPos.line].substring(this.cursorPos.column);
+			this.lines[this.cursorPos.line] = this.lines[this.cursorPos.line].substring(0, Math.max(0, this.cursorPos.column));
+			this.lines.splice(this.cursorPos.line+1, 0, newLine); 
+			this.moveCursor({ line:1, column:-Number.MAX_VALUE});
+		}
+	}
+	else return false;
+	return true;
+}
 
 // =======================
 // Render
@@ -273,7 +353,7 @@ WidgetContext.prototype.draw = function() {
 // Pad
 // =======
 
-var padRight = function(str, width, hScroll, padChar) {
+var padRightStop = function(str, width, hScroll, padChar) {
 	if(padChar === undefined) padChar = ' ';
 	if(hScroll === undefined) hScroll = 0;
 	var start = Math.max(0, Math.min(str.length - width, hScroll));
@@ -286,14 +366,21 @@ var padBoth = function(str, width, padChar) {
 	return Array(frontPadWidth+1).join(padChar) + str.substr(0, width) + Array(width - Math.min(width, str.length) - frontPadWidth + 1).join(padChar);
 }
 
+var padRight = function(str, width, hScroll, padChar) {
+	if(padChar === undefined) padChar = ' ';
+	if(hScroll === undefined) hScroll = 0;
+	return str.substr(hScroll, width) + Array(Math.max(0, width - Math.min(width, str.length - hScroll) + 1)).join(padChar);
+}
 
 module.exports = {
 	Menu: Menu,
 	Label: Label,
 	VBoxLayout: VBoxLayout,
 	HBoxLayout: HBoxLayout,
+	Input: Input,
 	WidgetContext: WidgetContext,
 	padRight: padRight,
+	padRightStop: padRightStop,
 	padBoth: padBoth
 	
 };

@@ -1,19 +1,32 @@
-var terminalWidgets = require('../index.js');
+var terminalWidgets = require('../index.js'), chalk = require("chalk");
 
 
 var widgetContext = new terminalWidgets.WidgetContext();
 
-var lines = [];
-var input = new terminalWidgets.Input(lines, 30, 1) {
-		item: function(item, cursorPos, width) {
-			var line = terminalWidgets.padRight(lines[item]+" ", width ); // " " is for cursor
-			if(cusorPos.line === item)
-				line = line.substring(0,cursorPos.column)+chalk.bgGreen(line[cursorPos.column])+line.substring(cursorPos.column+1);
+var input = new terminalWidgets.Input(30, 4, {
+		maxColumns: function() { return 50; },
+		maxLines: function() { return 20; },
+		item: function(line, cursorColumn, width, hScrollPos) {
+			var line = terminalWidgets.padRight(line, width, hScrollPos);
+			if(cursorColumn >= 0)
+				line = line.substring(0, cursorColumn-hScrollPos) + chalk.bgBlue(line[cursorColumn-hScrollPos]) + line.substring(cursorColumn-hScrollPos+1);
 			return line;
 		}
-	};
+	});
+var label = new terminalWidgets.Label(30,1, {
+		item: function(item, width) {
+			return terminalWidgets.padRight("line:" + (input.cursorPos.line+1) + ", col:" + (input.cursorPos.column+1), width);
+		}
+	});
 
-widgetContext.setWidget(input);
+var layoutWidgets = [ input, label ];
+var layout = new terminalWidgets.VBoxLayout({
+	itemsCount: function() { return layoutWidgets.length; },
+	item: function(item) { return layoutWidgets[item]; }
+});
+
+
+widgetContext.setWidget(layout);
 widgetContext.setFocus(input);
 
 process.stdin.setRawMode(true);
