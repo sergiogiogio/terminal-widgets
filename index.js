@@ -369,7 +369,7 @@ var padBoth = function(str, width, padChar) {
 var padRight = function(str, width, hScroll, padChar) {
 	if(padChar === undefined) padChar = ' ';
 	if(hScroll === undefined) hScroll = 0;
-	return str.substr(hScroll, width) + Array(Math.max(0, width - Math.min(width, str.length - hScroll) + 1)).join(padChar);
+	return str.substr(hScroll, width) + Array(width - Math.max(0, Math.min(width, str.length - hScroll)) + 1).join(padChar);
 }
 
 module.exports = {

@@ -44,7 +44,7 @@ var menu2 = new terminalWidgets.Menu(30, 10, {
 		itemsCount: function() { return 15; },
 		scrollWidth: function() { return 100; },
 		item: function(item, current, width, hScroll) {
-			 return (current ? "#" : " ") + terminalWidgets.padRight("menu2 item #" + item, width); 
+			 return  terminalWidgets.padRight((current ? "#" : " ") + "menu2 item #" + item, width, hScroll); 
 		},
 		itemSelected: function() { process.exit(); }
 	});
