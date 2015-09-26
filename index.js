@@ -266,6 +266,7 @@ Input.prototype.moveCursor = function(shift) {
 }
 
 Input.prototype.handleKeyEvent = function(key) {
+	var textModified = false;
 	if (this.callback.handleKeyEvent && this.callback.handleKeyEvent(key)) { }
 	else if(key.compare(cPageUp) === 0) { this.moveCursor({line:-this.height, column:0}); }
 	else if(key.compare(cPageDown) === 0) { this.moveCursor({line:this.height, column:0}); }
@@ -278,14 +279,17 @@ Input.prototype.handleKeyEvent = function(key) {
 	else if(key == "\u007F") { // backspace
 		this.lines[this.cursorPos.line] = this.lines[this.cursorPos.line].substring(0, Math.max(0, this.cursorPos.column-1))+this.lines[this.cursorPos.line].substring(this.cursorPos.column);
 		this.moveCursor({ line:0, column:-1});
+		textModified = true;
 	}
 	else if(key.compare(cDelete) === 0) { // delete
 		this.lines[this.cursorPos.line] = this.lines[this.cursorPos.line].substring(0, Math.max(0, this.cursorPos.column))+this.lines[this.cursorPos.line].substring(this.cursorPos.column+1);
+		textModified = true;
 	}
 	else if(key >= "\u0020" && key <= "\u007E") { // printable
 		if(!this.callback.maxColumns || this.lines[this.cursorPos.line].length < this.callback.maxColumns()) {
 			this.lines[this.cursorPos.line] = this.lines[this.cursorPos.line].substring(0, Math.max(0, this.cursorPos.column))+key+this.lines[this.cursorPos.line].substring(this.cursorPos.column);
 			this.moveCursor({ line:0, column:1});
+			textModified = true;
 		}
 	} 
 	else if(key.compare(cEnter) === 0) {
@@ -294,9 +298,12 @@ Input.prototype.handleKeyEvent = function(key) {
 			this.lines[this.cursorPos.line] = this.lines[this.cursorPos.line].substring(0, Math.max(0, this.cursorPos.column));
 			this.lines.splice(this.cursorPos.line+1, 0, newLine); 
 			this.moveCursor({ line:1, column:-Number.MAX_VALUE});
+			textModified = true;
 		}
 	}
 	else return false;
+	if(textModified && this.callback.textModified)
+		this.callback.textModified();
 	return true;
 }
 
