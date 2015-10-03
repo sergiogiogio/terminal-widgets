@@ -16,9 +16,16 @@ var cDelete = new Buffer( [27, 91, 51, 126] ) // '\u001b[3~';
 // VBoxLayout
 // =======================
 
-var VBoxLayout = function(callback) {
-	this.callback = callback;
+var VBoxLayout = function(param) {
+	if(param instanceof Array) {
+		VBoxLayout.call(this, {
+			itemsCount: function() { return param.length; },
+			item: function(item) { return param[item]; }
+		});
+	}
+	else this.callback = param;
 }
+
 
 VBoxLayout.prototype.renderIt = function() {
 	var widget = this;
@@ -60,8 +67,13 @@ VBoxLayout.prototype.renderIt = function() {
 // HBoxLayout
 // =======================
 
-var HBoxLayout = function(callback) {
-	this.callback = callback;
+var HBoxLayout = function(param) {
+	if(param instanceof Array) {
+		HBoxLayout.call(this, {
+			itemsCount: function() { return param.length; },
+			item: function(item) { return param[item]; }
+		});
+	} else this.callback = param;
 }
 
 HBoxLayout.prototype.renderIt = function() {
@@ -101,18 +113,19 @@ HBoxLayout.prototype.renderIt = function() {
 
 }
 
+
 // =======================
 // Label
 // =======================
 
-var Label = function(width, height, callback) {
-	this.width = width;
-	this.height = height;
+var Label = function(callback) {
 	this.callback = callback;
 }
 
 Label.prototype.renderIt = function() {
 	var widget = this;
+	this.width = this.callback.width();
+	this.height = this.callback.height();
 	return {
 		first: function() {
 			this.it = 0;
@@ -131,11 +144,11 @@ Label.prototype.renderIt = function() {
 }
 
 // =======================
-// Menu
+// OldMenu
 // =======================
 
  
-var Menu = function(width, height, callback) {
+var OldMenu = function(width, height, callback) {
 	this.width = width;
 	this.height = height;
 	this.topItem = 0;
@@ -144,7 +157,7 @@ var Menu = function(width, height, callback) {
 	this.callback = callback;
 }
 
-Menu.prototype.vScrollbarPos = function(currentItem, itemsCount, windowSize) {
+OldMenu.prototype.vScrollbarPos = function(currentItem, itemsCount, windowSize) {
 	var 	pos = Math.floor(currentItem*windowSize/itemsCount),
 		size = Math.max(1, Math.min(windowSize, Math.floor(windowSize * windowSize/itemsCount))),
 		start = Math.max(0, Math.min(pos - Math.floor(size/2), windowSize-size));
@@ -152,15 +165,17 @@ Menu.prototype.vScrollbarPos = function(currentItem, itemsCount, windowSize) {
 }
 
 
-Menu.prototype.hScrollbarPos = function(currentItem, itemsCount, windowSize) {
+OldMenu.prototype.hScrollbarPos = function(currentItem, itemsCount, windowSize) {
 	var 	pos = Math.floor(currentItem*windowSize/itemsCount),
 		size = Math.max(1, Math.min(windowSize, Math.ceil(windowSize * windowSize/itemsCount))),
 		start = pos;
 	return { start: start, end: start+size };
 }
 
-Menu.prototype.renderIt = function() {
+OldMenu.prototype.renderIt = function() {
 	var widget = this;
+	if(this.callback.width) this.width = this.callback.width();
+	if(this.callback.height) this.height = this.callback.height();
 
 	return {
 		
@@ -193,19 +208,19 @@ Menu.prototype.renderIt = function() {
 };
 
 
-Menu.prototype.shiftVCursor = function(shift) {
+OldMenu.prototype.shiftVCursor = function(shift) {
 	var hScrollBarHeight = (this.callback.scrollWidth() > 0 ) ? 1 : 0;
 	this.currentItem = Math.max(0, Math.min(this.callback.itemsCount() - 1, this.currentItem + shift)); 
 	this.topItem = Math.max(0, Math.min(this.callback.itemsCount() - (this.height-hScrollBarHeight), this.currentItem - Math.floor((this.height-hScrollBarHeight)/2)));
 }
 
-Menu.prototype.shiftHScroll = function(shift) {
+OldMenu.prototype.shiftHScroll = function(shift) {
 	var hScrollBarHeight = (this.callback.scrollWidth() > 0 ) ? 1 : 0;
 	var vScrollBarWidth = (this.height-hScrollBarHeight < this.callback.itemsCount() ) ? 1 : 0;
 	this.hScrollPos = Math.max(0, Math.min(this.callback.scrollWidth() - this.width + vScrollBarWidth, this.hScrollPos + shift)); 
 }
 
-Menu.prototype.handleKeyEvent = function(key) {
+OldMenu.prototype.handleKeyEvent = function(key) {
 	var hScrollBarHeight = (this.callback.scrollWidth() > 0 ) ? 1 : 0;
 	if (this.callback.handleKeyEvent && this.callback.handleKeyEvent(key)) { }
 	else if(key.compare(cArrowUp) === 0) { this.shiftVCursor(-1); }
@@ -221,26 +236,217 @@ Menu.prototype.handleKeyEvent = function(key) {
 	return true;
 }
 
+
+// =======================
+// VMenu
+// =======================
+
+ 
+var VMenu = function(callback) {
+	this.topItem = 0;
+	this.currentItem = 0;
+	this.hScrollPos = 0;
+	this.callback = callback;
+	this.callback.scrollWidth = this.callback.scrollWidth || function() { return 0;  };
+}
+
+VMenu.prototype.renderIt = function() {
+	var widget = this;
+	this.width = this.callback.width();
+	this.height = this.callback.height();
+
+	return {
+		
+		first: function() {
+			this.it = widget.topItem;
+		},
+		next: function() {
+			this.it++;
+		},
+		line: function() {
+			return (this.it < widget.callback.itemsCount()) ? widget.callback.item(this.it, this.it === widget.currentItem, widget.width, widget.hScrollPos) : Array(widget.width+1).join(' ');
+		},
+		isDone: function() {
+			return (this.it >= widget.topItem + widget.height);
+		}
+	}
+};
+
+
+VMenu.prototype.shiftVCursor = function(shift) {
+	this.currentItem = Math.max(0, Math.min(this.callback.itemsCount() - 1, this.currentItem + shift)); 
+	this.topItem = Math.max(0, Math.min(this.callback.itemsCount() - (this.height), this.currentItem - Math.floor((this.height)/2)));
+}
+
+VMenu.prototype.shiftHScroll = function(shift) {
+	this.hScrollPos = Math.max(0, Math.min(this.callback.scrollWidth() - this.width, this.hScrollPos + shift)); 
+}
+
+VMenu.prototype.handleKeyEvent = function(key) {
+	if (this.callback.handleKeyEvent && this.callback.handleKeyEvent(key)) { }
+	else if(key.compare(cArrowUp) === 0) { this.shiftVCursor(-1); }
+	else if(key.compare(cArrowDown) === 0) { this.shiftVCursor(+1); }
+	else if(key.compare(cArrowLeft) === 0) { this.shiftHScroll(-1); }
+	else if(key.compare(cArrowRight) === 0) { this.shiftHScroll(+1); }
+	else if(key.compare(cHome) === 0) { this.shiftVCursor(-Number.MAX_VALUE); }
+	else if(key.compare(cEnd) === 0) { this.shiftVCursor(Number.MAX_VALUE); }
+	else if(key.compare(cPageUp) === 0) { this.shiftVCursor(-this.height); }
+	else if(key.compare(cPageDown) === 0) { this.shiftVCursor(this.height); }
+	else if(key.compare(cEnter) === 0) { this.callback.itemSelected(this.currentItem); }
+	else return false;
+	return true;
+}
+
+
+// =======================
+// HMenu
+// =======================
+
+ 
+var HMenu = function(callback) {
+	this.leftItem = 0;
+	this.currentItem = 0;
+	this.hScrollPos = 0;
+	this.callback = callback;
+	this.callback.scrollHeight = this.callback.scrollHeight || function() { return 0;  };
+}
+
+HMenu.prototype.renderIt = function() {
+	var widget = this;
+	this.width = this.callback.width();
+	this.height = this.callback.height();
+
+	return {
+		
+		first: function() {
+			this.it = 0;
+		},
+		next: function() {
+			this.it++;
+		},
+		line: function() {
+			var line = "";
+			var itemsWidth = Math.floor(widget.width/widget.callback.itemsCountPerLine());
+			for(var i = widget.leftItem ; i < widget.leftItem + widget.callback.itemsCountPerLine() ; ++i) {
+				line += (i < widget.callback.itemsCount()) ?
+					widget.callback.item(i, i === widget.currentItem, itemsWidth, widget.vScrollPos)
+					: Array(itemsWidth+1).join(" ");
+			}
+			line += Array(widget.width - widget.callback.itemsCountPerLine()*itemsWidth + 1).join(" ");
+			return line;
+		},
+		isDone: function() {
+			return (this.it >= widget.height);
+		}
+	}
+};
+
+
+HMenu.prototype.shiftHCursor = function(shift) {
+	this.currentItem = Math.max(0, Math.min(this.callback.itemsCount() - 1, this.currentItem + shift)); 
+	this.leftItem = Math.max(0, Math.min(this.callback.itemsCount() - this.callback.itemsCountPerLine(), this.currentItem - Math.floor(this.callback.itemsCountPerLine()/2)));
+}
+
+HMenu.prototype.shiftVScroll = function(shift) {
+	this.vScrollPos = Math.max(0, Math.min(this.callback.scrollHeight() - this.height, this.vScrollPos + shift)); 
+}
+
+HMenu.prototype.handleKeyEvent = function(key) {
+	if (this.callback.handleKeyEvent && this.callback.handleKeyEvent(key)) { }
+	else if(key.compare(cArrowUp) === 0) { this.shiftVScroll(-1); }
+	else if(key.compare(cArrowDown) === 0) { this.shiftVScroll(+1); }
+	else if(key.compare(cArrowLeft) === 0) { this.shiftHCursor(-1); }
+	else if(key.compare(cArrowRight) === 0) { this.shiftHCursor(+1); }
+	else if(key.compare(cHome) === 0) { this.shiftHCursor(-Number.MAX_VALUE); }
+	else if(key.compare(cEnd) === 0) { this.shiftHCursor(Number.MAX_VALUE); }
+	else if(key.compare(cPageUp) === 0) { this.shiftHCursor(-this.callback.itemsCountPerLine()); }
+	else if(key.compare(cPageDown) === 0) { this.shiftHCursor(this.callback.itemsCountPerLine()); }
+	else if(key.compare(cEnter) === 0) { this.callback.itemSelected(this.currentItem); }
+	else return false;
+	return true;
+}
+
+// =======================
+// VScrollBar
+// =======================
+
+ 
+var VScrollBar = function(callback) {
+	this.callback = callback;
+}
+
+VScrollBar.prototype.renderIt = function() {
+	var widget = this;
+	this.width = this.callback.width();
+	this.height = this.callback.height();
+
+	return {
+		
+		first: function() {
+			this.it = 0;
+			this.scrollBarInfo = widget.callback.scrollBarInfo(widget.height);
+		},
+		next: function() {
+			this.it++;
+		},
+		line: function() {
+			return widget.callback.item((this.it >= this.scrollBarInfo.beg && this.it < this.scrollBarInfo.end), widget.width);
+		},
+		isDone: function() {
+			return (this.it >= widget.height);
+		}
+	}
+};
+
+// =======================
+// HScrollBar
+// =======================
+
+ 
+var HScrollBar = function(callback) {
+	this.callback = callback;
+}
+
+HScrollBar.prototype.renderIt = function() {
+	var widget = this;
+	this.width = this.callback.width();
+	this.height = this.callback.height();
+
+	return {
+		
+		first: function() {
+			this.it = 0;
+			this.scrollBarInfo = widget.callback.scrollBarInfo(widget.width);
+		},
+		next: function() {
+			this.it++;
+		},
+		line: function() {
+			return widget.callback.item(this.scrollBarInfo.beg, this.scrollBarInfo.end, widget.width);
+		},
+		isDone: function() {
+			return (this.it >= widget.height);
+		}
+	}
+};
+
 // =======================
 // Input
 // =======================
 
-var Input = function(width, height, callback) {
-	this.width = width;
-	this.height = height;
+var Input = function(lines, callback) {
 	this.callback = callback;
-	this.lines = [ "" ];
+	this.lines = lines;
+	if(this.lines.length === 0) this.lines.push("");
 	this.cursorPos = {line: 0, column: 0};
 	this.topLine = 0;
 	this.hScrollPos = 0;
 }
 
-Input.prototype.setLines = function(lines) {
-	this.lines = lines;
-}
-
 Input.prototype.renderIt = function() {
 	var widget = this;
+	this.width = this.callback.width();
+	this.height = this.callback.height();
 	return {
 		first: function() {
 			this.it = widget.topLine;
@@ -277,8 +483,18 @@ Input.prototype.handleKeyEvent = function(key) {
 	else if(key.compare(cHome) === 0) { this.moveCursor({line: 0, column:-Number.MAX_VALUE}); }
 	else if(key.compare(cEnd) === 0) { this.moveCursor({line: 0, column:Number.MAX_VALUE}); }
 	else if(key == "\u007F") { // backspace
-		this.lines[this.cursorPos.line] = this.lines[this.cursorPos.line].substring(0, Math.max(0, this.cursorPos.column-1))+this.lines[this.cursorPos.line].substring(this.cursorPos.column);
-		this.moveCursor({ line:0, column:-1});
+		if(this.cursorPos.column === 0) {
+			if(this.cursorPos.line > 0) {
+				var line = this.lines[this.cursorPos.line];
+				this.lines.splice(this.cursorPos.line, 1);
+				var col = this.lines[this.cursorPos.line-1].length;
+				this.lines[this.cursorPos.line-1] += line;
+				this.cursorPos = { line: this.cursorPos.line - 1, column: col };
+			}
+		} else {
+			this.lines[this.cursorPos.line] = this.lines[this.cursorPos.line].substring(0, Math.max(0, this.cursorPos.column-1))+this.lines[this.cursorPos.line].substring(this.cursorPos.column);
+			this.moveCursor({ line:0, column:-1});
+		}
 		textModified = true;
 	}
 	else if(key.compare(cDelete) === 0) { // delete
@@ -345,14 +561,14 @@ WidgetContext.prototype.handleKeyEvent = function(key) {
 }
 
 WidgetContext.prototype.clear = function() {
-	console.log("\u001b["+(this.linesWritten+1)+"A");	
-	console.log("\u001b[D");	
+	process.stdout.write("\u001b["+(this.linesWritten)+"A");	
+	process.stdout.write("\u001b[J");
+	this.linesWritten = 0;
 }
 
 
-
 WidgetContext.prototype.draw = function() {
-	console.log("\u001b["+(this.linesWritten+1)+"A");	
+	process.stdout.write("\u001b["+(this.linesWritten)+"A");	
 	this.linesWritten = renderWidget(this.widget);
 }
 
@@ -379,8 +595,19 @@ var padRight = function(str, width, hScroll, padChar) {
 	return str.substr(hScroll, width) + Array(width - Math.max(0, Math.min(width, str.length - hScroll)) + 1).join(padChar);
 }
 
+
+
+var scrollBarInfo = function(itemBeg, itemWindow, itemsCount, scrollBarSize) {
+	return {
+		beg: Math.floor(itemBeg*scrollBarSize/itemsCount),
+		end: Math.min(scrollBarSize, Math.floor(itemBeg*scrollBarSize/itemsCount) + Math.ceil(itemWindow*scrollBarSize/itemsCount))
+	};
+};
+
+
 module.exports = {
-	Menu: Menu,
+	VMenu: VMenu,
+	HMenu: HMenu,
 	Label: Label,
 	VBoxLayout: VBoxLayout,
 	HBoxLayout: HBoxLayout,
@@ -388,7 +615,9 @@ module.exports = {
 	WidgetContext: WidgetContext,
 	padRight: padRight,
 	padRightStop: padRightStop,
-	padBoth: padBoth
-	
+	padBoth: padBoth,
+	scrollBarInfo: scrollBarInfo,
+	VScrollBar: VScrollBar,
+	HScrollBar: HScrollBar
 };
 
