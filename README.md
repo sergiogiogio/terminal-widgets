@@ -12,16 +12,16 @@ Simple widgets for the terminal where content and behavior are controlled by cal
 A simple clock implemented as a Label refreshed via timer
 
 ``` js
-var tw = require("terminal-widgets")
+var tw = require("terminal-widgets");
 
 var context = new tw.WidgetContext();
 
 var label = new tw.Label({
 	width: function() { return 50; },
 	height: function() { return 1; },
-        item: function(line, width) {
-                return tw.padBoth(String(new Date()), width);
-        }
+	item: function(line, width) {
+		return tw.padBoth(String(new Date()), width);
+	}
 });
 
 context.setWidget(label);
@@ -31,7 +31,7 @@ setInterval(function() { context.draw(); }, 1000);
 ```
 
 # Common principles
-Widgets are defined by a set of callback functions. The calling program typically does not set the state of the widget, instead the callback return the state when called.
+Widgets are defined by a set of callback functions. The calling program typically does not set the state of the widget, instead the callback functions return the state when called.
 
 The UI (drawing and input) is controlled by a WidgetContext object. The main widget must be selected in the WidgetContext before drawing.
 
@@ -39,7 +39,7 @@ The location of widgets on the screen cannot be precisely controlled (only their
 
 The callbacks *must* return text of the correct size (width). The functions padBoth, padRight and padRightStop can be used for this purpose. The callbacks can also style the text (e.g. use colors) but the result must fit in the width parameter provided.
 
-No stylying is provided by default - not even the current item in a Menu widget or the cursor in an Input widget. These stylings must be done in the callbacks, refer to examples for possible solutions.
+No styling is provided by default - not even the current item in a Menu widget or the cursor in an Input widget. These stylings must be done in the callbacks, refer to examples for possible solutions.
 
 The framework does not include an input loop, you will need to provide one yourself following the below sample:
 ``` js
@@ -103,7 +103,6 @@ var menu = new tw.VMenu({
       height: function() {
         //TODO: return the height of the widget
       },
-      {
       itemsCount: function() {
         // TODO: return the number of items in the menu 
       },
@@ -144,15 +143,14 @@ var menu = new tw.HMenu({
       height: function() {
         //TODO: return the height of the widget
       },
-      {
       itemsCount: function() {
         // TODO: return the number of items in the menu 
       },
-      scrollHeight: function() 
+      scrollHeight: function()  {
         // Optional: return the maximum vertical scrolling.
         // Returning 0 disables horizontal scrolling.
       },
-      itemsCountPerLine: function() 
+      itemsCountPerLine: function() {
         // TODO: return the number of items in a line(row).
       },
       item: function(item, current, width, hScroll) {
@@ -239,7 +237,6 @@ var input = new tw.Input(
       height: function() {
         //TODO: return the height of the widget
       },
-      {
       maxColumns: function() {
         // TODO: return the max number of columns 
       },
@@ -269,12 +266,12 @@ var input = new tw.Input(
         //   return false if the key was not consumed (the key will be processed by the Input)
         return false;
       }
-);
+});
 ```
 
 # HBoxLayout
 Enables to display several widgets side by side.
-Note: Layouts are widgets
+Note: Layouts are widgets, they do however not have width and height callbacks, their dimensions are determined by their content.
 ``` js
 var layout = new tw.HBoxLayout({
         itemsCount: function() {
@@ -289,7 +286,7 @@ var layout = new tw.HBoxLayout({
 
 # VBoxLayout
 Enables to display several widgets vertically.
-Note: Layouts are widgets
+Note: Layouts are widgets, they do however not have width and height callbacks, their dimensions are determined by their content.
 ``` js
 var layout = new tw.VBoxLayout({
         itemsCount: function() {
@@ -336,7 +333,8 @@ tw.padRight(str, width, hScrollPos, padChar);
 tw.padBoth(str, width, padChar);
 ```
 
-#ScrollBar functions
+# ScrollBar functions
+Utility functions used in ScrollBars' scrollBarInfo callback.
 ``` js
 // Returns the scrollbar information in an internal format used to render the scrollbar
 // itemTop(Number): the index of the item as the top of window
