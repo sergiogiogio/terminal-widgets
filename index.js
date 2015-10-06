@@ -236,6 +236,73 @@ OldMenu.prototype.handleKeyEvent = function(key) {
 	return true;
 }
 
+// =======================
+// Grid
+// =======================
+
+ 
+var Grid = function(callback) {
+	this.topLeftItem = { line: 0, col: 0 };
+	this.currentItem = { line: 0, col: 0 };
+	this.callback = callback;
+}
+
+Grid.prototype.renderIt = function() {
+	var widget = this;
+	this.width = this.callback.width();
+	this.height = this.callback.height();
+
+	return {
+		
+		first: function() {
+			this.it = widget.topLeftItem.line*widget.callback.itemsSize().height;
+		},
+		next: function() {
+			this.it++;
+		},
+		line: function() {
+			var line = Math.floor(this.it/widget.callback.itemsSize().height), col, width = 0, renderline = "";
+			for(col = widget.topLeftItem.col ; width < widget.width && col < widget.topLeftItem.col + widget.callback.itemsCount().cols && line < widget.topLeftItem.line + widget.callback.itemsCount().lines; col++) {
+				renderline += widget.callback.renderItemLine( { line: line, col: col }, this.it % widget.callback.itemsSize().height, Math.max(widget.width - width, widget.callback.itemsSize().width) );
+				width += widget.callback.itemsSize().width;
+			}
+			renderLine += Array(Math.max(0, widget.width - width) +1).join(' ');
+			return renderLine;
+		},
+		isDone: function() {
+			return (this.it >= widget.topLeftItem.line*widget.callback.itemsSize().height + widget.height);
+		}
+	}
+};
+
+
+Grid.prototype.moveCurrentItem = function(shift) {
+	this.currentItem = {
+		line: Math.max(0, Math.min(this.callback.itemsCount().lines - 1, this.currentItem.line + shift.line)),
+		col: Math.max(0, Math.min(this.callback.itemsCount().cols - 1, this.currentItem.col + shift.col))
+	};
+	this.topItem = { 
+		line: Math.max(0, Math.min(this.callback.itemsCount().lines  - (this.height), this.currentItem - Math.floor((this.height)/2))),
+		col: Math.max(0, Math.min(this.callback.itemsCount().cols - (this.height), this.currentItem - Math.floor((this.height)/2)))
+	};
+	this.hScrollPos = Math.max(0, Math.min(this.callback.scrollWidth() - this.width, this.hScrollPos + shift)); 
+}
+
+
+VMenu.prototype.handleKeyEvent = function(key) {
+	if (this.callback.handleKeyEvent && this.callback.handleKeyEvent(key)) { }
+	else if(key.compare(cArrowUp) === 0) { this.shiftVCursor(-1); }
+	else if(key.compare(cArrowDown) === 0) { this.shiftVCursor(+1); }
+	else if(key.compare(cArrowLeft) === 0) { this.shiftHScroll(-1); }
+	else if(key.compare(cArrowRight) === 0) { this.shiftHScroll(+1); }
+	else if(key.compare(cHome) === 0) { this.shiftVCursor(-Number.MAX_VALUE); }
+	else if(key.compare(cEnd) === 0) { this.shiftVCursor(Number.MAX_VALUE); }
+	else if(key.compare(cPageUp) === 0) { this.shiftVCursor(-this.height); }
+	else if(key.compare(cPageDown) === 0) { this.shiftVCursor(this.height); }
+	else if(key.compare(cEnter) === 0) { this.callback.itemSelected(this.currentItem); }
+	else return false;
+	return true;
+}
 
 // =======================
 // VMenu
