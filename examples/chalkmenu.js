@@ -8,10 +8,12 @@ var uiWidth = function() { return process.stdout.columns; };
 var menuItems = [ "Russia", "Ukraine", "France", "Spain", "Sweden", "Germany", "Finland", "Norway", "Poland", "Italy", "United Kingdom", "Romania", "Belarus", "Kazakhstan*", "Greece", "Bulgaria", "Iceland", "Hungary", "Portugal", "Azerbaijan", "Ireland", "Austria", "Czech Republic", "Serbia", "Georgia", "Lithuania", "Latvia", "Croatia", "Bosnia and Herzegovina", "Slovakia", "Estonia", "Denmark", "Netherlands", "Switzerland", "Moldova", "Belgium", "Armenia", "Albania", "Republic of Macedonia", "Turkey*", "Slovenia", "Montenegro", "Cyprus", "Luxembourg", "Andorra", "Malta", "Liechtenstein", "San Marino", "Monaco", "Vatican City" ];
 var menu = new terminalWidgets.VMenu({
 		height: function() { return 10; },
-		width: function() { return Math.max(0, uiWidth() - 1); },
+		width: function() { return Math.max(0, uiWidth() - vScrollBar.callback.width()); },
+		rowsHeight: function() { return 1; },
 		itemsCount: function() { return menuItems.length; },
-		item: function(item, current, width, hScroll) {
-			 return (current ? chalk.black.bold.bgGreen : chalk.white.bgBlack) (terminalWidgets.padBoth(menuItems[item], width));
+		maxTextScroll: function() { return 0; },
+		render: function(row, line, current, width) {
+			 return (current ? chalk.black.bold.bgGreen : chalk.white.bgBlack) (terminalWidgets.padBoth(menuItems[row], width));
 		},
 		itemSelected: function(item) {
 			destination = menuItems[item];
@@ -23,27 +25,21 @@ var nostyle = function(str) { return str; };
 
 var destination = "";
 
-var vScrollBar = new terminalWidgets.VScrollBar({
-	height: function() { return menu.callback.height(); },
-	width: function() { return Math.max(0, uiWidth() - menu.callback.width()); },
-	scrollBarInfo: function(size) {
-		return terminalWidgets.scrollBarInfo(menu.topItem, menu.callback.height(), menu.callback.itemsCount(), size);
-	},
-	item: function(bar, width) {
-		return (bar? chalk.bgBlue : nostyle)(terminalWidgets.padRight("", width));
-	}
+var vScrollBar = menu.newVScrollBar({
+        height: function() { return menu.callback.height(); },
+        width: function() { return 2; },
+        render: function(component, line, width) {
+                return (component === 0 ? chalk.bgBlue : nostyle)(terminalWidgets.padRight("", width));
+        }
 });
 
 
-var hScrollBar = new terminalWidgets.HScrollBar({
-	height: function() { return 1; },
-	width: function() { return Math.max(0, uiWidth()-2); },
-	scrollBarInfo: function(size) {
-		return ret = terminalWidgets.scrollBarInfo(menu.topItem, menu.callback.height(), menu.callback.itemsCount(), size);
-	},
-	item: function(beg, end, width) {
-		return terminalWidgets.padRight("", beg) + chalk.bgGreen(terminalWidgets.padRight("", end-beg)) + terminalWidgets.padRight("", width-end);
-	}
+var hScrollBar = menu.newHScrollBar({
+        height: function() { return 2; },
+        width: function() { return Math.max(0, menu.callback.width()); },
+        render: function(component, line, width) {
+                return (component === 0 ? chalk.bgBlue : nostyle)(terminalWidgets.padRight("", width));
+        }
 });
 
 var confirmMenuItems = [ "Yes", "No", "Maybe", "Probably", "Possibly", "Perhaps" ];
@@ -51,9 +47,10 @@ var confirmMenu = new terminalWidgets.HMenu({
 		height: function() { return (widgetContext.focusedWidget === confirmMenu) ? 1 : 0; },
 		width: function() { return Math.floor(uiWidth()*70/100); },
 		itemsCount: function() { return confirmMenuItems.length; },
-		itemsCountPerLine: function() { return 3; },
-		item: function(item, current, width, hScroll) {
-			 return (current ? chalk.black.bold.bgGreen : chalk.white.bgBlack) (terminalWidgets.padBoth(confirmMenuItems[item], width));
+		colsWidth: function() { return Math.floor(confirmMenu.callback.width()/3); },
+		maxTextScroll: function() { return 0; },
+		render: function(col, line, current, width) {
+			 return (current ? chalk.black.bold.bgGreen : chalk.white.bgBlack) (terminalWidgets.padBoth(confirmMenuItems[col], width));
 		},
 		itemSelected: function(item) {
 			if(confirmMenuItems[item] == "Yes") { 
@@ -67,21 +64,18 @@ var confirmMenu = new terminalWidgets.HMenu({
 	});
 
 
-var hConfirmMenuScrollBar = new terminalWidgets.HScrollBar({
-	height: function() { return (widgetContext.focusedWidget === confirmMenu) ? 1 : 0; },
-	width: function() { return confirmMenu.callback.width(); },
-	scrollBarInfo: function(size) {
-		return terminalWidgets.scrollBarInfo(confirmMenu.leftItem, confirmMenu.callback.itemsCountPerLine(), confirmMenu.callback.itemsCount(), hConfirmMenuScrollBar.callback.width());
-	},
-	item: function(beg, end, width) {
-		return terminalWidgets.padRight("", beg) + chalk.bgGreen(terminalWidgets.padRight("", end-beg)) + terminalWidgets.padRight("", width-end);
-	}
+var hConfirmMenuScrollBar = confirmMenu.newHScrollBar({
+        height: function() { return confirmMenu.callback.height() > 0 ? 2 : 0; },
+        width: function() { return Math.max(0, confirmMenu.callback.width()); },
+        render: function(component, line, width) {
+                return (component === 0 ? chalk.bgBlue : nostyle)(terminalWidgets.padRight("", width));
+        }
 });
 
 var confirmLabel = new terminalWidgets.Label({
 		height: function() { return (widgetContext.focusedWidget === confirmMenu) ? 1 : 0; },
 		width: function() { return Math.floor(uiWidth()*30/100); },
-		item: function(line, width) {
+		render: function(line, width) {
 			return terminalWidgets.padRight("Going to " + destination + "?", width);
 		}
 });
