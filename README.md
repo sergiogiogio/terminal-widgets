@@ -83,15 +83,60 @@ var label = new tw.Label(
     height: function() {
       //TODO: return the height of the widget
     },
-    { // callback
-      item: function(line, width) {
-        // TODO: return the text of the Label
-        // line (Number): the line number of the text to return
-        // width (Number): the text should exactly fit in this width
-      }
+    render: function(line, width) {
+      // TODO: renders the Label
+      // line (Number): the line number of the text to return
+      // width (Number): the text should exactly fit in this width
     }
 );
 ```
+
+# Grid
+Provides a vertical menu widget where items can be selected.
+``` js
+var menu = new tw.VMenu({
+      width: function() {
+        //TODO: return the width of the widget (Number)
+      },
+      height: function() {
+        //TODO: return the height of the widget (Number)
+      },
+      colsWidth: function() {
+        //TODO: return the columns width (Number)
+      },
+      rowsHeight: function() {
+        //TODO: return the rows height (Number)
+      },
+      colsCount: function() {
+        //TODO: return the number of columns (Number)
+      },
+      rowsCount: function() {
+        //TODO: return the number of rows (Number)
+      },
+      render: function(item, current, width, hScroll) {
+        // TODO: return the rendered line of a cell 
+        // item ({col: Number, row: Number}): the cell to render
+        // line (Number): the line in the cell
+        // current (Boolean): true if the cursor is currently over the item
+        // width (Number): the text should exactly fit in this width
+      },
+      itemSelected: function(item) {
+        // Notification of an item selection (an item is selected if the user presses Enter)
+        // TODO: execute action as a response to the item selection
+        // item (Number): the index of the item
+      },
+      handleKeyEvent: function(key) {
+        // Notification of a key event (recived before the key is processed by the Menu).
+        // This callback is optional, remove it if not used
+        // TODO: execute action as a response to the key event and
+        //   return true if the key was consumed (the key will not be processed by the Menu)
+        //   return false if the key was not consumed (the key will be processed by the Menu)
+        return false;
+      }
+});
+```
+
+
 
 # VMenu
 Provides a vertical menu widget where items can be selected.
@@ -103,16 +148,20 @@ var menu = new tw.VMenu({
       height: function() {
         //TODO: return the height of the widget
       },
+      rowsHeight: function() {
+        //TODO: return the rows height (Number)
+      },
       itemsCount: function() {
         // TODO: return the number of items in the menu 
       },
-      scrollWidth: function() {
+      maxTextScroll: function() {
         // Optional: return the maximum horizontal scrolling.
         // Returning 0 disables horizontal scrolling.
       },
-      item: function(item, current, width, hScroll) {
-        // TODO: return the text of the menu item
-        // item (Number): the index of the item
+      render: function(item, current, width, hScroll) {
+        // TODO: return the rendered text of the menu item
+        // item (Number): the index of the row
+        // line (Number): the index of the line in the row
         // current (Boolean): true if the cursor is currently over the item
         // width (Number): the text should exactly fit in this width
         // hScroll (Number): current horizontal scrolling value
