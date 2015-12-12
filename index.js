@@ -254,7 +254,7 @@ var VMenu = function(callback) {
 		handleKeyEvent: function(key) {
 			if (callback.handleKeyEvent && callback.handleKeyEvent(key)) { }
                         else if(key.compare(cArrowLeft) === 0) { widget.textScrollPos = Math.max(0, widget.textScrollPos-1); }
-                        else if(key.compare(cArrowRight) === 0) { widget.textScrollPos = Math.min(widget.callback.maxTextScroll()-widget.callback.width(), widget.textScrollPos+1); }
+                        else if(key.compare(cArrowRight) === 0) { widget.textScrollPos = Math.min(Math.max(0, widget.callback.maxTextScroll()-widget.callback.width()), widget.textScrollPos+1); }
                         else return false;
                         return true;
 
