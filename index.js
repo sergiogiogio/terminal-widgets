@@ -555,7 +555,7 @@ WidgetContext.prototype.clear = function() {
 
 
 WidgetContext.prototype.draw = function() {
-	process.stdout.write("\u001b["+(this.linesWritten)+"A");	
+	if(this.linesWritten > 0) process.stdout.write("\u001b["+(this.linesWritten)+"A");	
 	this.linesWritten = renderWidget(this.widget);
 }
 
