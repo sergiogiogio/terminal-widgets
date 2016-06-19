@@ -1,6 +1,6 @@
 {
   "name": "terminal-widgets",
-  "version": "0.2.1",
+  "version": "0.2.2",
   "description": "Widgets for the terminal",
   "main": "index.js",
   "scripts": {
